@@ -7,6 +7,7 @@ import android.support.v4.view.MotionEventCompat;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -68,16 +69,6 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
     // Whether this item is scaled up rather than clipped
     private boolean mScale;
     private boolean mNotify;
-
-    private Animation mScaleAnimation;
-
-    private Animation mScaleUpAnimation;
-
-    private Animation mAlphaStartAnimation;
-
-    private Animation mAlphaMaxAnimation;
-
-    private Animation mScaleUpToStartAnimation;
 
     private static final int SCALE_UP_DURATION = 150;
     // Max amount of circle that can be filled by progress during swipe gesture,
@@ -188,9 +179,17 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         ensureTarget();
+        //先判断是否父类处理刷新
+        isSuperOntouch = super.onInterceptTouchEvent(ev);
+        if (isSuperOntouch) {
+            Log.d("SwipeRefreshLoadLayout", "swipe father intercept");
+            return true;
+        }
+        Log.d("SwipeRefreshLoadLayout", "swipe intercept");
+
 
         final int action = MotionEventCompat.getActionMasked(ev);
-
+        //
         if (mReturningToEnd && action == MotionEvent.ACTION_DOWN) {
             mReturningToEnd = false;
         }
@@ -241,20 +240,19 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                     break;
             }
         }
-        //判断是否给父类消费
-        if (!mIsEndDragged){
-            isSuperOntouch=super.onInterceptTouchEvent(ev);
-        }
+        return mIsEndDragged;
 
-        return mIsEndDragged ? mIsEndDragged : super.onInterceptTouchEvent(ev);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-
-        if (isSuperOntouch){
-            return super.onTouchEvent(ev);
+        //如果父类拦截，则交给父类处理刷新问题
+        isSuperOntouch = super.onTouchEvent(ev);
+        if (isSuperOntouch) {
+            Log.d("SwipeRefreshLoadLayout", "swipe father onTouchEvent");
+            return isSuperOntouch;
         }
+        Log.d("SwipeRefreshLoadLayout", "swipe onTouchEvent");
 
         final int action = MotionEventCompat.getActionMasked(ev);
 
