@@ -25,10 +25,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
         recyclerView.setAdapter(new Adapter());
-        swipeRefreshLoadLayout.setOnRefreshListener(()->swipeRefreshLoadLayout.setRefreshing(false));
+        swipeRefreshLoadLayout.setOnRefreshListener(() -> swipeRefreshLoadLayout.postDelayed(() -> swipeRefreshLoadLayout.setRefreshing(false), 2000));
+        swipeRefreshLoadLayout.setOnLoadListener(()->swipeRefreshLoadLayout.postDelayed(()->swipeRefreshLoadLayout.setLoading(false), 2000));
+
     }
+
 
     class Adapter extends RecyclerView.Adapter<Adapter.ViewHolder>{
 

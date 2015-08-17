@@ -46,16 +46,18 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
     private int mCircleWidth;
 
     private int mCircleHeight;
-    private float mSpinnerFinalOffset;
+    //最长拉伸距离。
+    private float mLoadViewFinalOffset;
     // Default offset in dips from the top of the view to where the progress spinner should stop
     private static final int DEFAULT_CIRCLE_TARGET = 64;
+    //设置手指在屏幕上拉拉多少距离会触发下拉刷新
     private float mTotalDragDistance = -1;
 
     // Target is returning to its start offset because it was cancelled or a
     // refresh was triggered.
     private boolean mReturningToEnd;
     private View mTarget; // the target of the gesture
-    private OnLoadListener mListener;
+    private OnLoadListener onLoadListener;
     private boolean mLoading = false;
     private boolean mIsEndDragged;
     private int mActivePointerId = INVALID_POINTER;
@@ -90,11 +92,11 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
     private boolean isSuperOntouch;
 
     //当前控件的偏移量
-    private int mCurrentTargetOffset;
+    private int mCurrentTargetOffsetBottom;
 
     private Animation mScaleAnimation;
 
-    private Animation mScaleDownAnimation;
+    private Animation mScaleUpAnimation;
 
     private Animation mAlphaStartAnimation;
 
@@ -128,8 +130,8 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
         createLoadView();
         ViewCompat.setChildrenDrawingOrderEnabled(this, true);
         // the absolute offset has to take into account that the circle starts at an offset
-        mSpinnerFinalOffset = DEFAULT_CIRCLE_TARGET * metrics.density;
-        mTotalDragDistance = mSpinnerFinalOffset;
+        mLoadViewFinalOffset = DEFAULT_CIRCLE_TARGET * metrics.density;
+        mTotalDragDistance = mLoadViewFinalOffset;
 
         setColorSchemeResources(android.R.color.holo_blue_bright,
                 android.R.color.holo_green_light,
@@ -183,12 +185,12 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
         final int childTop = getPaddingTop();
         final int childWidth = width - getPaddingLeft() - getPaddingRight();
         final int childHeight = height - getPaddingTop() - getPaddingBottom();
-        child.layout(childLeft, childTop + mCurrentTargetOffset, childLeft + childWidth, childTop + childHeight + mCurrentTargetOffset);
+        child.layout(childLeft, childTop + mCurrentTargetOffsetBottom, childLeft + childWidth, childTop + childHeight + mCurrentTargetOffsetBottom);
 
         int loadWidth = mLoadView.getMeasuredWidth();
         int loadHeight = mLoadView.getMeasuredHeight();
-        mLoadView.layout(0, childHeight + mCurrentTargetOffset,
-                loadWidth, childHeight + loadHeight + mCurrentTargetOffset);
+        mLoadView.layout(0, childHeight + mCurrentTargetOffsetBottom,
+                loadWidth, childHeight + loadHeight + mCurrentTargetOffsetBottom);
     }
 
     @Override
@@ -319,45 +321,45 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                     float dragPercent = Math.min(1f, Math.abs(originalDragPercent));
                     float adjustedPercent = (float) Math.max(dragPercent - .4, 0) * 5 / 3;
                     float extraOS = Math.abs(overscrollTop) - mTotalDragDistance;
-                    float slingshotDist = mSpinnerFinalOffset;
+                    float slingshotDist = mLoadViewFinalOffset;
                     float tensionSlingshotPercent = Math.max(0,
                             Math.min(extraOS, slingshotDist * 2) / slingshotDist);
                     float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow(
                             (tensionSlingshotPercent / 4), 2)) * 2f;
                     float extraMove = (slingshotDist) * tensionPercent * 2;
 
-                    int targetY = mOriginalOffsetTop
-                            + (int) ((slingshotDist * dragPercent) + extraMove);
-//                    // where 1.0f is a full circle
-//                    if (mLoadView.getVisibility() != View.VISIBLE) {
-//                        mLoadView.setVisibility(View.VISIBLE);
-//                    }
-//                    if (!mScale) {
-//                        ViewCompat.setScaleX(mLoadView, 1f);
-//                        ViewCompat.setScaleY(mLoadView, 1f);
-//                    }
-//                    if (overscrollTop < mTotalDragDistance) {
-//                        if (mScale) {
-//                            setAnimationProgress(overscrollTop / mTotalDragDistance);
-//                        }
-//                        if (mLoadProgress.getAlpha() > STARTING_PROGRESS_ALPHA
-//                                && !isAnimationRunning(mAlphaStartAnimation)) {
-//                            // Animate the alpha
-//                            startProgressAlphaStartAnimation();
-//                        }
-//                        float strokeStart = adjustedPercent * .8f;
-//                        mLoadProgress.setStartEndTrim(0f, Math.min(MAX_PROGRESS_ANGLE, strokeStart));
-//                        mLoadProgress.setArrowScale(Math.min(1f, adjustedPercent));
-//                    } else {
-//                        if (mLoadProgress.getAlpha() < MAX_ALPHA
-//                                && !isAnimationRunning(mAlphaMaxAnimation)) {
-//                            // Animate the alpha
-//                            startProgressAlphaMaxAnimation();
-//                        }
-//                    }
-//                    float rotation = (-0.25f + .4f * adjustedPercent + tensionPercent * 2) * .5f;
-//                    mLoadProgress.setProgressRotation(rotation);
-                    setTargetOffsetTopAndBottom(targetY - mCurrentTargetOffset,
+                    int targetY = (int) ((slingshotDist * dragPercent) + extraMove);
+                    Log.i("LOG", "targetY=" + targetY + ",extraOS=" + extraOS);
+                    // where 1.0f is a full circle
+                    if (mLoadCircleView.getVisibility() != View.VISIBLE) {
+                        mLoadCircleView.setVisibility(View.VISIBLE);
+                    }
+                    if (!mScale) {
+                        ViewCompat.setScaleX(mLoadCircleView, 1f);
+                        ViewCompat.setScaleY(mLoadCircleView, 1f);
+                    }
+                    if (overscrollTop < mTotalDragDistance) {
+                        if (mScale) {
+                            setAnimationProgress(overscrollTop / mTotalDragDistance);
+                        }
+                        if (mLoadProgress.getAlpha() > STARTING_PROGRESS_ALPHA
+                                && !isAnimationRunning(mAlphaStartAnimation)) {
+                            // Animate the alpha
+                            startProgressAlphaStartAnimation();
+                        }
+                        float strokeStart = adjustedPercent * .8f;
+                        mLoadProgress.setStartEndTrim(0f, Math.min(MAX_PROGRESS_ANGLE, strokeStart));
+                        mLoadProgress.setArrowScale(Math.min(1f, adjustedPercent));
+                    } else {
+                        if (mLoadProgress.getAlpha() < MAX_ALPHA
+                                && !isAnimationRunning(mAlphaMaxAnimation)) {
+                            // Animate the alpha
+                            startProgressAlphaMaxAnimation();
+                        }
+                    }
+                    float rotation = (-0.25f + .4f * adjustedPercent + tensionPercent * 2) * .5f;
+                    mLoadProgress.setProgressRotation(rotation);
+                    setTargetOffsetTopAndBottom(-targetY,
                             true /* requires update */);
                 }
                 break;
@@ -384,10 +386,10 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                 final float y = MotionEventCompat.getY(ev, pointerIndex);
                 final float overscrollTop = (y - mInitialMotionY) * DRAG_RATE;
                 mIsEndDragged = false;
-                if (overscrollTop > mTotalDragDistance) {
+                if (Math.abs(overscrollTop) > mTotalDragDistance) {
                     setLoading(true, true /* notify */);
                 } else {
-                    // cancel refresh
+                    // cancel load
                     mLoading = false;
                     mLoadProgress.setStartEndTrim(0f, 0f);
                     Animation.AnimationListener listener = null;
@@ -401,7 +403,7 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                             @Override
                             public void onAnimationEnd(Animation animation) {
                                 if (!mScale) {
-                                    startScaleDownAnimation(null);
+                                    startScaleUpAnimation(null);
                                 }
                             }
 
@@ -411,7 +413,7 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
 
                         };
                     }
-                    animateOffsetToEndPosition(mCurrentTargetOffset, listener);
+                    animateOffsetToEndPosition(mCurrentTargetOffsetBottom, listener);
                     mLoadProgress.showArrow(false);
                 }
                 mActivePointerId = INVALID_POINTER;
@@ -422,12 +424,16 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
         return true;
     }
 
+    public void setOnLoadListener(OnLoadListener onLoadListener) {
+        this.onLoadListener = onLoadListener;
+    }
+
     private void setTargetOffsetTopAndBottom(int offset, boolean requiresUpdate) {
         mTarget.bringToFront();
-        mTarget.offsetTopAndBottom(offset);
+//        mTarget.offsetTopAndBottom(offset);
         mLoadView.bringToFront();
-        mLoadView.offsetTopAndBottom(offset);
-        mCurrentTargetOffset = mTarget.getTop();
+//        mLoadView.offsetTopAndBottom(offset);
+        mCurrentTargetOffsetBottom = offset;
         if (requiresUpdate && android.os.Build.VERSION.SDK_INT < 11) {
             invalidate();
         }
@@ -473,23 +479,46 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
             ensureTarget();
             mLoading = loading;
             if (mLoading) {
-                animateOffsetToCorrectPosition(mCurrentTargetOffset, mLoadListener);
+                //loading 过程，滚到正常位置
+                animateOffsetToCorrectPosition(mCurrentTargetOffsetBottom, mLoadListener);
             } else {
-                startScaleDownAnimation(mLoadListener);
+                //取消过程，回到默认
+                startScaleUpAnimation(mLoadListener);
             }
         }
     }
 
+    public void setLoading(boolean refreshing) {
+        if (refreshing && mLoading != refreshing) {
+            //手动加载不需要添加东西
+        } else {
+            setLoading(refreshing, false /* notify */);
+        }
+    }
+
+    private final Animation mAnimateToCorrectPosition = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            int targetTop = 0;
+            int endTarget = -(int) mLoadViewFinalOffset;
+
+            targetTop = (int) ((mFrom - endTarget) * (1f - interpolatedTime) + endTarget);
+
+            setTargetOffsetTopAndBottom(targetTop, false /* requires update */);
+            mLoadProgress.setArrowScale(1 - interpolatedTime);
+        }
+    };
+
     private void animateOffsetToCorrectPosition(int from, Animation.AnimationListener listener) {
         mFrom = from;
-//        mAnimateToCorrectPosition.reset();
-//        mAnimateToCorrectPosition.setDuration(ANIMATE_TO_TRIGGER_DURATION);
-//        mAnimateToCorrectPosition.setInterpolator(mDecelerateInterpolator);
-//        if (listener != null) {
-//            mCircleView.setAnimationListener(listener);
-//        }
-//        mCircleView.clearAnimation();
-//        mCircleView.startAnimation(mAnimateToCorrectPosition);
+        mAnimateToCorrectPosition.reset();
+        mAnimateToCorrectPosition.setDuration(ANIMATE_TO_TRIGGER_DURATION);
+        mAnimateToCorrectPosition.setInterpolator(mDecelerateInterpolator);
+        if (listener != null) {
+            mLoadCircleView.setAnimationListener(listener);
+        }
+        mLoadCircleView.clearAnimation();
+        mLoadCircleView.startAnimation(mAnimateToCorrectPosition);
     }
 
     private Animation.AnimationListener mLoadListener = new Animation.AnimationListener() {
@@ -508,8 +537,8 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                 mLoadProgress.setAlpha(MAX_ALPHA);
                 mLoadProgress.start();
                 if (mNotify) {
-                    if (mListener != null) {
-                        mListener.onLoad();
+                    if (onLoadListener != null) {
+                        onLoadListener.onLoad();
                     }
                 }
             } else {
@@ -520,25 +549,38 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
                 if (mScale) {
                     setAnimationProgress(0 /* animation complete and view is hidden */);
                 } else {
-                    setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentTargetOffset,
+                    setTargetOffsetTopAndBottom(mOriginalOffsetTop - mCurrentTargetOffsetBottom,
                             true /* requires update */);
                 }
             }
-            mCurrentTargetOffset = mTarget.getTop();
+            mCurrentTargetOffsetBottom = mTarget.getTop();
         }
     };
 
-    private void startScaleDownAnimation(Animation.AnimationListener listener) {
-        mScaleDownAnimation = new Animation() {
+    private void startScaleUpAnimation(Animation.AnimationListener listener) {
+        mScaleUpAnimation = new Animation() {
             @Override
             public void applyTransformation(float interpolatedTime, Transformation t) {
                 setAnimationProgress(1 - interpolatedTime);
             }
         };
-        mScaleDownAnimation.setDuration(SCALE_DOWN_DURATION);
+        mScaleUpAnimation.setDuration(SCALE_DOWN_DURATION);
         mLoadCircleView.setAnimationListener(listener);
         mLoadCircleView.clearAnimation();
-        mLoadCircleView.startAnimation(mScaleDownAnimation);
+        mLoadCircleView.startAnimation(mScaleUpAnimation);
+    }
+
+    private final Animation mAnimateToEndPosition = new Animation() {
+        @Override
+        public void applyTransformation(float interpolatedTime, Transformation t) {
+            moveToEnd(interpolatedTime);
+        }
+    };
+
+    private void moveToEnd(float interpolatedTime) {
+        int targetTop = 0;
+        targetTop = (mFrom - (int) ((mFrom) * interpolatedTime));
+        setTargetOffsetTopAndBottom(targetTop, false /* requires update */);
     }
 
     private void animateOffsetToEndPosition(int from, Animation.AnimationListener listener) {
@@ -547,14 +589,14 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
             startScaleDownReturnToStartAnimation(from, listener);
         } else {
             mFrom = from;
-//            mAnimateToStartPosition.reset();
-//            mAnimateToStartPosition.setDuration(ANIMATE_TO_START_DURATION);
-//            mAnimateToStartPosition.setInterpolator(mDecelerateInterpolator);
-//            if (listener != null) {
-//                mLoadCircleView.setAnimationListener(listener);
-//            }
-//            mLoadView.clearAnimation();
-//            mLoadView.startAnimation(mAnimateToStartPosition);
+            mAnimateToEndPosition.reset();
+            mAnimateToEndPosition.setDuration(ANIMATE_TO_START_DURATION);
+            mAnimateToEndPosition.setInterpolator(mDecelerateInterpolator);
+            if (listener != null) {
+                mLoadCircleView.setAnimationListener(listener);
+            }
+            mLoadView.clearAnimation();
+            mLoadView.startAnimation(mAnimateToEndPosition);
         }
     }
 
@@ -697,7 +739,7 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
     }
 
     public interface OnLoadListener {
-        public void onLoad();
+        void onLoad();
     }
 
     private void onSecondaryPointerUp(MotionEvent ev) {
@@ -710,5 +752,4 @@ public class SwipeRefreshLoadLayout extends SwipeRefreshLayout {
             mActivePointerId = MotionEventCompat.getPointerId(ev, newPointerIndex);
         }
     }
-
 }
